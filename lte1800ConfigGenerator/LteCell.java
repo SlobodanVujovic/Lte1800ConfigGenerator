@@ -1,11 +1,14 @@
 package lte1800ConfigGenerator;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class LteCell {
 	Map<String, String> cellInfo;
-	Map<String, GsmNeighbour> gsmNeighbours;
+	Map<String, GsmNeighbour> gsmNeighbours = new LinkedHashMap<>();
+	Set<String> uniqueBcchOfNeighboursPerCell = new LinkedHashSet<>();
 
 	public void createInitialCellInfoMap() {
 		cellInfo = new LinkedHashMap<>();
@@ -18,11 +21,6 @@ public class LteCell {
 		cellInfo.put("maxPower", "dummyData");
 		cellInfo.put("channelBw", "dummyData");
 		cellInfo.put("dlEarfcn", "dummyData");
-		cellInfo.put("longitude", "dummyData");
-		cellInfo.put("latitude", "dummyData");
-		cellInfo.put("azimut", "dummyData");
-		cellInfo.put("height", "dummyData");
-		cellInfo.put("netActCellId", "dummyData");
-		cellInfo.put("eci", "dummyData");
 	}
+
 }
