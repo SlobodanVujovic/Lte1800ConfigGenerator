@@ -49,6 +49,9 @@ public class LteSite {
 		hardware.put("rf2IsShared", "dummyData");
 		hardware.put("rf3IsShared", "dummyData");
 		hardware.put("rf4IsShared", "dummyData");
+		hardware.put("ftif", "dummyData");
+		hardware.put("gsmPort", "dummyData");
+		hardware.put("umtsPort", "dummyData");
 	}
 
 	public void createUniqueGsmNeighbours() {

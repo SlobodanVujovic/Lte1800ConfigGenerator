@@ -21,10 +21,21 @@ public class AllConfigFiles {
 			xmlCreator.copyTemplateXmlFile(siteCode);
 			xmlCreator.createXmlDocument();
 			xmlCreator.editXmlDateAndTime();
+			boolean ftifIsUsed = false;
+			String ftifIsUsedStr = lteSite.hardware.get("ftif");
+			if (ftifIsUsedStr.equals("DA")) {
+				ftifIsUsed = true;
+			}
+			xmlCreator.isFtifUsed(ftifIsUsed);
 			xmlCreator.editMrbts_eNodeBId(eNodeBId);
 			xmlCreator.editLnbts_eNodeBId(eNodeBId);
 			xmlCreator.editLncellId(lteSite);
-			xmlCreator.editBtsscl_BtsId_BtsName(eNodeBId, siteCode);
+			String numberOfSharedRfModules = lteSite.hardware.get("numberOfSharedRfModules");
+			boolean isSharing = false;
+			if (!numberOfSharedRfModules.equals("0") && !numberOfSharedRfModules.equals("")) {
+				isSharing = true;
+			}
+			xmlCreator.editBtsscl_BtsId_BtsName(eNodeBId, siteCode, isSharing);
 			xmlCreator.editLnbts_EnbName(siteCode);
 			int counter = 0;
 			for (GsmNeighbour gsmNeighbour : lteSite.uniqueGsmNeighbours) {
@@ -46,23 +57,25 @@ public class AllConfigFiles {
 				}
 				counter = 0;
 			}
+			xmlCreator.editLcell_AnttenaPorts(lteSite.hardware.get("cell1Ports"));
 			String numberOfRfModulesStr = lteSite.hardware.get("numberOfRfModules");
 			int numberOfRfModules = Integer.valueOf(numberOfRfModulesStr);
+			xmlCreator.editNumberOfAntenna(numberOfRfModules);
 			for (counter = 1; counter <= numberOfRfModules; counter++) {
 				String rfModuleNumber = "rf" + counter + "IsShared";
-				boolean isSharing = false;
+				boolean isModuleShared = false;
 				if (lteSite.hardware.get(rfModuleNumber).equals("DA")) {
-					isSharing = true;
+					isModuleShared = true;
 				}
-				xmlCreator.editRmod_SiteName(eNodeBId, String.valueOf(counter), siteName, isSharing);
+				xmlCreator.editRmod_SiteName(eNodeBId, String.valueOf(counter), siteName, isModuleShared);
 			}
-			String numberOfSharedRfModules = lteSite.hardware.get("numberOfSharedRfModules");
 			if (!numberOfSharedRfModules.equals("0") && !numberOfSharedRfModules.equals("")) {
 				xmlCreator.editGsmSmod_SiteName(eNodeBId);
 			}
 			xmlCreator.editLteSmod_SiteName(eNodeBId, siteName);
 			xmlCreator.editFtm_SiteCode(eNodeBId, siteCode, siteName);
 			xmlCreator.editIpno(lteSite);
+			xmlCreator.editIpno_Twamp(lteSite);
 			xmlCreator.editTwamp(lteSite.transmission.get("cuDestIp"));
 			xmlCreator.editIprt(lteSite);
 			xmlCreator.editIvif1(lteSite);

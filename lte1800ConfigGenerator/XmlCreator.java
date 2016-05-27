@@ -28,7 +28,7 @@ import org.w3c.dom.NodeList;
 
 public class XmlCreator {
 	String templateFilePath = "C:\\CG output\\Commissioning_KKLLL_YYYYMMDD.xml", outputFilePath;
-	File templateFile = new File(templateFilePath), outputFile;
+	File templateFile = new File(templateFilePath), outputFile, ftifFile = new File("C:\\CG output\\FTIF_Config.xml");
 	DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyyMMdd");
 	DateTimeFormatter dateAndTimeFormat = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 	Document xmlDocument;
@@ -132,42 +132,84 @@ public class XmlCreator {
 	}
 
 	public void editLncellId(LteSite lteSite) {
-		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
-		int cellId = 1;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NamedNodeMap managedObjectAttributes = managedObjectNode.getAttributes();
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expression;
+		Object result = null;
+		try {
+			/*
+			 * Pay attention to expression string, with contains(x, y) we search for y inside x. This string say to search all managedObjects that in
+			 * distName attribute have "LNCEL-" anywhere.
+			 */
+			expression = xPath.compile("//cmData/managedObject[contains(@distName,'LNCEL-')]");
+			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		NodeList lncelNodeList = (NodeList) result;
+		for (int i = 0; i < lncelNodeList.getLength(); i++) {
+			Node lncelNode = lncelNodeList.item(i);
+			NamedNodeMap managedObjectAttributes = lncelNode.getAttributes();
 			Node distNameAttribute = managedObjectAttributes.getNamedItem("distName");
 			String distNameOldValue = distNameAttribute.getNodeValue();
-			if (distNameOldValue.contains("LNCEL")) {
-				LteCell lteCell = lteSite.lteCells.get(String.valueOf(cellId));
-				String lncellId = lteCell.cellInfo.get("lnCellId");
-				int startIndex = distNameOldValue.indexOf("LNCEL") + 6;
-				int endIndex = distNameOldValue.indexOf("/", startIndex);
-				if (endIndex != -1) {
+			int startIndex = distNameOldValue.indexOf("LNCEL") + 6;
+			int endIndex = distNameOldValue.indexOf("/", startIndex);
+			if (endIndex != -1) {
+				String oldCellId = distNameOldValue.substring(startIndex, endIndex);
+				if (oldCellId.charAt(oldCellId.length() - 1) == '1') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("1"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
+							+ distNameOldValue.substring(endIndex);
+					distNameAttribute.setNodeValue(distNameNewValue);
+				} else if (oldCellId.charAt(oldCellId.length() - 1) == '2') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("2"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
+							+ distNameOldValue.substring(endIndex);
+					distNameAttribute.setNodeValue(distNameNewValue);
+				} else if (oldCellId.charAt(oldCellId.length() - 1) == '3') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("3"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
 							+ distNameOldValue.substring(endIndex);
 					distNameAttribute.setNodeValue(distNameNewValue);
 				} else {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("4"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
+							+ distNameOldValue.substring(endIndex);
+					distNameAttribute.setNodeValue(distNameNewValue);
+				}
+			} else {
+				String oldCellId = distNameOldValue.substring(startIndex);
+				if (oldCellId.charAt(oldCellId.length() - 1) == '1') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("1"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
+					distNameAttribute.setNodeValue(distNameNewValue);
+				} else if (oldCellId.charAt(oldCellId.length() - 1) == '2') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("2"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
+					distNameAttribute.setNodeValue(distNameNewValue);
+				} else if (oldCellId.charAt(oldCellId.length() - 1) == '3') {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("3"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
+					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
+					distNameAttribute.setNodeValue(distNameNewValue);
+				} else {
+					LteCell lteCell = lteSite.lteCells.get(String.valueOf("4"));
+					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
 					distNameAttribute.setNodeValue(distNameNewValue);
 				}
-				/*
-				 * CellId is increment when we find line with class="LNCEL". Because we start from cellId = "1" we are looking for next such line.
-				 * That is reason for ...item(i + 1) command.
-				 */
-				Node nextManagedObjectNode = managedObjectList.item(i + 1);
-				NamedNodeMap nextManagedObjectAttributes = nextManagedObjectNode.getAttributes();
-				Node classNameAttribute = nextManagedObjectAttributes.getNamedItem("class");
-				String classNameValue = classNameAttribute.getNodeValue();
-				if (classNameValue.equals("LNCEL")) {
-					++cellId;
-				}
 			}
+
 		}
 	}
 
-	public void editBtsscl_BtsId_BtsName(String eNodeBId, String siteCode) {
+	public void editBtsscl_BtsId_BtsName(String eNodeBId, String siteCode, boolean isSharing) {
 		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
 		for (int i = 0; i < managedObjectList.getLength(); i++) {
 			Node managedObjectNode = managedObjectList.item(i);
@@ -186,6 +228,12 @@ public class XmlCreator {
 							childNode.setTextContent(eNodeBId);
 						} else if (nameNodeValue.equals("btsName")) {
 							childNode.setTextContent(siteCode);
+						} else if (nameNodeValue.equals("rfSharingEnabled")) {
+							if (isSharing) {
+								childNode.setTextContent("true");
+							} else {
+								childNode.setTextContent("false");
+							}
 						}
 					}
 				}
@@ -362,20 +410,22 @@ public class XmlCreator {
 			e.printStackTrace();
 		}
 		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodesList = managedObjectNode.getChildNodes();
-		for (int j = 0; j < childNodesList.getLength(); j++) {
-			Node childNode = childNodesList.item(j);
-			if (childNode.getNodeName().equals("list")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("gerArfcnVal")) {
-					removeChildsFrom(childNode);
-					for (String bcch : uniqueBcchOfNeighbours) {
-						Element p = xmlDocument.createElement("p");
-						p.setTextContent(bcch);
-						childNode.appendChild(p);
+		for (int i = 0; i < managedObjectList.getLength(); i++) {
+			Node managedObjectNode = managedObjectList.item(i);
+			NodeList childNodesList = managedObjectNode.getChildNodes();
+			for (int j = 0; j < childNodesList.getLength(); j++) {
+				Node childNode = childNodesList.item(j);
+				if (childNode.getNodeName().equals("list")) {
+					NamedNodeMap childNodeAttributes = childNode.getAttributes();
+					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
+					String nameNodeValue = nameNodeAttribute.getNodeValue();
+					if (nameNodeValue.equals("gerArfcnVal")) {
+						removeChildsFrom(childNode);
+						for (String bcch : uniqueBcchOfNeighbours) {
+							Element p = xmlDocument.createElement("p");
+							p.setTextContent(bcch);
+							childNode.appendChild(p);
+						}
 					}
 				}
 			}
@@ -401,20 +451,22 @@ public class XmlCreator {
 			e.printStackTrace();
 		}
 		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodesList = managedObjectNode.getChildNodes();
-		for (int j = 0; j < childNodesList.getLength(); j++) {
-			Node childNode = childNodesList.item(j);
-			if (childNode.getNodeName().equals("list")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("arfcnValueListGERAN")) {
-					removeChildsFrom(childNode);
-					for (String bcch : uniqueBcchOfNeighbours) {
-						Element p = xmlDocument.createElement("p");
-						p.setTextContent(bcch);
-						childNode.appendChild(p);
+		for (int i = 0; i < managedObjectList.getLength(); i++) {
+			Node managedObjectNode = managedObjectList.item(i);
+			NodeList childNodesList = managedObjectNode.getChildNodes();
+			for (int j = 0; j < childNodesList.getLength(); j++) {
+				Node childNode = childNodesList.item(j);
+				if (childNode.getNodeName().equals("list")) {
+					NamedNodeMap childNodeAttributes = childNode.getAttributes();
+					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
+					String nameNodeValue = nameNodeAttribute.getNodeValue();
+					if (nameNodeValue.equals("arfcnValueListGERAN")) {
+						removeChildsFrom(childNode);
+						for (String bcch : uniqueBcchOfNeighbours) {
+							Element p = xmlDocument.createElement("p");
+							p.setTextContent(bcch);
+							childNode.appendChild(p);
+						}
 					}
 				}
 			}
@@ -482,7 +534,13 @@ public class XmlCreator {
 			e.printStackTrace();
 		}
 		NodeList managedObjectList = (NodeList) result;
-		Node firstManagedObject = managedObjectList.item(0);
+		Node firstManagedObject = null;
+		for (int i = 0; i < managedObjectList.getLength(); i++) {
+			firstManagedObject = managedObjectList.item(i);
+			if (firstManagedObject.getNodeName().equals("managedObject")) {
+				break;
+			}
+		}
 		firstManagedObject.getParentNode().insertBefore(managedObject, firstManagedObject);
 	}
 
@@ -499,20 +557,22 @@ public class XmlCreator {
 			e.printStackTrace();
 		}
 		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodesList = managedObjectNode.getChildNodes();
-		for (int j = 0; j < childNodesList.getLength(); j++) {
-			Node childNode = childNodesList.item(j);
-			if (childNode.getNodeName().equals("list")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("redirGeranArfcnValueL")) {
-					removeChildsFrom(childNode);
-					for (String bcch : uniqueBcchOfNeighbours) {
-						Element p = xmlDocument.createElement("p");
-						p.setTextContent(bcch);
-						childNode.appendChild(p);
+		for (int i = 0; i < managedObjectList.getLength(); i++) {
+			Node managedObjectNode = managedObjectList.item(i);
+			NodeList childNodesList = managedObjectNode.getChildNodes();
+			for (int j = 0; j < childNodesList.getLength(); j++) {
+				Node childNode = childNodesList.item(j);
+				if (childNode.getNodeName().equals("list")) {
+					NamedNodeMap childNodeAttributes = childNode.getAttributes();
+					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
+					String nameNodeValue = nameNodeAttribute.getNodeValue();
+					if (nameNodeValue.equals("redirGeranArfcnValueL")) {
+						removeChildsFrom(childNode);
+						for (String bcch : uniqueBcchOfNeighbours) {
+							Element p = xmlDocument.createElement("p");
+							p.setTextContent(bcch);
+							childNode.appendChild(p);
+						}
 					}
 				}
 			}
@@ -965,6 +1025,206 @@ public class XmlCreator {
 										String pNameNodeValue = pNameNodeAttribute.getNodeValue();
 										if (pNameNodeValue.equals("masterIpAddr")) {
 											pNode.setTextContent(topIp);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void editLcell_AnttenaPorts(String cellPorts) {
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expression;
+		Object result = null;
+		try {
+			expression = xPath.compile("//cmData/managedObject[@class=\"LCELL\"]/list/item");
+			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		String[] antPort = new String[] { "1", "3", "7", "9", "13", "15" };
+		if (cellPorts.equals("1-1")) {
+			antPort[0] = "1";
+			antPort[1] = "7";
+			antPort[2] = "3";
+			antPort[3] = "9";
+			antPort[4] = "5";
+			antPort[5] = "11";
+		}
+		NodeList itemList = (NodeList) result;
+		for (int i = 0; i < itemList.getLength(); i++) {
+			Node itemNode = itemList.item(i);
+			NodeList childNodeList = itemNode.getChildNodes();
+			for (int j = 0; j < childNodeList.getLength(); j++) {
+				Node childNode = childNodeList.item(j);
+				if (childNode.getNodeName().equals("p")) {
+					NamedNodeMap pNodeAttributes = childNode.getAttributes();
+					Node pNameNodeAttribute = pNodeAttributes.getNamedItem("name");
+					String pNameNodeValue = pNameNodeAttribute.getNodeValue();
+					if (pNameNodeValue.equals("antlId")) {
+						childNode.setTextContent(antPort[i]);
+					}
+				}
+			}
+		}
+	}
+
+	public void isFtifUsed(boolean ftifIsUsed) {
+		Document ftifDocument = null;
+		if (ftifIsUsed) {
+			DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+			builderFactory.setIgnoringComments(true);
+			try {
+				DocumentBuilder builder = builderFactory.newDocumentBuilder();
+				ftifDocument = builder.parse(ftifFile);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			XPathFactory xPathFactory = XPathFactory.newInstance();
+			XPath xPath = xPathFactory.newXPath();
+			XPathExpression expressionOfFtifNodes, expressionOfReferenceNode;
+			Object resultOfFtifNodes = null, resultOfReferenceNode = null;
+			try {
+				expressionOfFtifNodes = xPath.compile("//cmData/managedObject");
+				expressionOfReferenceNode = xPath
+						.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
+				resultOfReferenceNode = expressionOfReferenceNode.evaluate(xmlDocument, XPathConstants.NODE);
+				resultOfFtifNodes = expressionOfFtifNodes.evaluate(ftifDocument, XPathConstants.NODESET);
+			} catch (XPathExpressionException e) {
+				e.printStackTrace();
+			}
+			Node referenceNode = (Node) resultOfReferenceNode;
+			NodeList managedObjectNodeList = (NodeList) resultOfFtifNodes;
+			for (int i = 0; i < managedObjectNodeList.getLength(); i++) {
+				Element managedObjectElement = (Element) managedObjectNodeList.item(i);
+				/*
+				 * Create a duplicate node and transfer ownership of the new node into the destination document. Second parameter in importNode()
+				 * method, if set to true mean that we copy all children of the node.
+				 */
+				Node managedObjectCopy = xmlDocument.importNode(managedObjectElement, true);
+				/*
+				 * Make the new node an actual item in the target document. Pay attention how to insert node at specific level of xml. First we find
+				 * some node at level that we want to put into new nodes and then get parent of that reference node and in that parent we add nodes as
+				 * children. This will put all nodes to the bottom of parent node children list so in next method we reorder nodes in same parent node
+				 * to fit as we want.
+				 */
+				Node parentNode = referenceNode.getParentNode();
+				parentNode.appendChild(managedObjectCopy);
+			}
+			moveFtifNodesToSpecificPosition();
+		}
+	}
+
+	private void moveFtifNodesToSpecificPosition() {
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expressionOfReferenceNode, expressionOfPpttNode, expressionOfEthlkNode;
+		Object resultOfReferenceNode = null, resultOfPpttNode = null, resultOfEthlkNode = null;
+		try {
+			expressionOfReferenceNode = xPath
+					.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
+			expressionOfPpttNode = xPath.compile("//cmData/managedObject[@class=\"PPTT\"]");
+			expressionOfEthlkNode = xPath
+					.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-1-')]");
+			resultOfReferenceNode = expressionOfReferenceNode.evaluate(xmlDocument, XPathConstants.NODE);
+			resultOfPpttNode = expressionOfPpttNode.evaluate(xmlDocument, XPathConstants.NODESET);
+			resultOfEthlkNode = expressionOfEthlkNode.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		Node referenceNode = (Node) resultOfReferenceNode;
+		NodeList ppttNodeList = (NodeList) resultOfPpttNode;
+		NodeList ethlkNodeList = (NodeList) resultOfEthlkNode;
+		for (int i = 0; i < ppttNodeList.getLength(); i++) {
+			Node ppttNode = ppttNodeList.item(i);
+			referenceNode.getParentNode().insertBefore(ppttNode, referenceNode);
+		}
+		for (int i = 0; i < ethlkNodeList.getLength(); i++) {
+			Element ethlkNode = (Element) ethlkNodeList.item(i);
+			referenceNode.getParentNode().insertBefore(ethlkNode, referenceNode);
+		}
+	}
+
+	public void editNumberOfAntenna(int numberOfRfModules) {
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expression;
+		Object result = null;
+		try {
+			expression = xPath.compile("//cmData/managedObject[@class=\"ANTL\"]");
+			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		NodeList antlNodeList = (NodeList) result;
+		int numberOfAntenna = numberOfRfModules * 6;
+		for (int i = numberOfAntenna; i < antlNodeList.getLength(); i++) {
+			Node antlNode = antlNodeList.item(i);
+			Node parentNode = antlNode.getParentNode();
+			/*
+			 * When you read an XML document from a file, the whitespaces between tags actually constitute valid DOM nodes, according to the DOM
+			 * specification. Therefore, the XML parser treats each such sequence of whitespaces as DOM nodes (of type "TEXT"). The "indent" before
+			 * the element and the "carriage return" (and following indent) after it are text nodes. If you remove an element and there's a text node
+			 * before or after it, naturally those nodes are not removed. If you want to remove the element, then also remove the text node in front
+			 * of it (provided it consists entirely of whitespace).
+			 */
+			Node prevNode = antlNode.getPreviousSibling();
+			if (prevNode != null && prevNode.getNodeType() == Node.TEXT_NODE
+					&& prevNode.getNodeValue().trim().length() == 0) {
+				parentNode.removeChild(prevNode);
+			}
+			parentNode.removeChild(antlNode);
+		}
+	}
+
+	// Nema test u "TestAllConfigFiles-u" jer je samo za BG regiju. Provereno kroz koriscenje programa.
+	public void editIpno_Twamp(LteSite lteSite) {
+		String siteName = lteSite.generalInfo.get("LocationId");
+		boolean isBgArea = false;
+		if (siteName.contains("BG")) {
+			isBgArea = true;
+		}
+		if (isBgArea) {
+			XPathFactory xPathFactory = XPathFactory.newInstance();
+			XPath xPath = xPathFactory.newXPath();
+			XPathExpression expression;
+			Object result = null;
+			String eNodeBId = lteSite.generalInfo.get("eNodeBId");
+			try {
+				expression = xPath.compile("//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId
+						+ "/LNBTS-" + eNodeBId + "/FTM-1/IPNO-1\"]");
+				result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+			} catch (XPathExpressionException e) {
+				e.printStackTrace();
+			}
+			NodeList managedObjectList = (NodeList) result;
+			Node managedObjectNode = managedObjectList.item(0);
+			NodeList childNodeList = managedObjectNode.getChildNodes();
+			for (int i = 0; i < childNodeList.getLength(); i++) {
+				Node childNode = childNodeList.item(i);
+				if (childNode.getNodeName().equals("list")) {
+					NamedNodeMap childAttributes = childNode.getAttributes();
+					Node childNameAttribute = childAttributes.getNamedItem("name");
+					String childNameValue = childNameAttribute.getNodeValue();
+					if (childNameValue.equals("twampFlag")) {
+						NodeList itemNodeList = childNode.getChildNodes();
+						for (int j = 0; j < itemNodeList.getLength(); j++) {
+							Node itemNode = itemNodeList.item(j);
+							if (itemNode.getNodeName().equals("item")) {
+								NodeList pNodeList = itemNode.getChildNodes();
+								for (int k = 0; k < pNodeList.getLength(); k++) {
+									Node pNode = pNodeList.item(k);
+									if (pNode.getNodeName().equals("p")) {
+										NamedNodeMap pNodeAttributes = pNode.getAttributes();
+										Node pNameAttribute = pNodeAttributes.getNamedItem("name");
+										String pNameValue = pNameAttribute.getNodeValue();
+										if (pNameValue.equals("twampIpAddress")) {
+											pNode.setTextContent(lteSite.transmission.get("cuDestIp"));
 										}
 									}
 								}
