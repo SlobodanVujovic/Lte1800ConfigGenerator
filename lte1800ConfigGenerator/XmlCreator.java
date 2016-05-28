@@ -1117,6 +1117,7 @@ public class XmlCreator {
 				parentNode.appendChild(managedObjectCopy);
 			}
 			moveFtifNodesToSpecificPosition();
+			editUnit();
 		}
 	}
 
@@ -1147,6 +1148,33 @@ public class XmlCreator {
 		for (int i = 0; i < ethlkNodeList.getLength(); i++) {
 			Element ethlkNode = (Element) ethlkNodeList.item(i);
 			referenceNode.getParentNode().insertBefore(ethlkNode, referenceNode);
+		}
+	}
+
+	private void editUnit() {
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expression;
+		Object result = null;
+		try {
+			expression = xPath.compile("//cmData/managedObject[@class=\"UNIT\"]");
+			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		NodeList unitNodeList = (NodeList) result;
+		Node unitNode = unitNodeList.item(0);
+		NodeList pNodeList = unitNode.getChildNodes();
+		for (int i = 0; i < pNodeList.getLength(); i++) {
+			Node pNode = pNodeList.item(i);
+			if (pNode.getNodeName().equals("p")) {
+				NamedNodeMap pAttributes = pNode.getAttributes();
+				Node pNameAttribute = pAttributes.getNamedItem("name");
+				String pNameValue = pNameAttribute.getNodeValue();
+				if (pNameValue.equals("unitTypeExpected")) {
+					pNode.setTextContent("472311A");
+				}
+			}
 		}
 	}
 
