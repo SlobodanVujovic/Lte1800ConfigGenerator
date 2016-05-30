@@ -68,9 +68,13 @@ public class XmlCreator {
 		String dateAndTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(dateAndTimeFormat);
 		NodeList logList = xmlDocument.getElementsByTagName("log");
 		Node logNode = logList.item(0);
-		NamedNodeMap logAttributes = logNode.getAttributes();
-		Node dateTimeAttribute = logAttributes.getNamedItem("dateTime");
-		dateTimeAttribute.setNodeValue(dateAndTime);
+		setAttributeValueOfNode(logNode, "dateTime", dateAndTime);
+	}
+
+	private void setAttributeValueOfNode(Node node, String attributeName, String newValue) {
+		NamedNodeMap nodeAttributes = node.getAttributes();
+		Node specificAttribute = nodeAttributes.getNamedItem(attributeName);
+		specificAttribute.setNodeValue(newValue);
 	}
 
 	public void writeToXml() {
@@ -88,70 +92,83 @@ public class XmlCreator {
 	}
 
 	public void editMrbts_eNodeBId(String eNodeBId) {
-		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[contains(@distName, 'MRBTS')]");
 		for (int i = 0; i < managedObjectList.getLength(); i++) {
 			Node managedObjectNode = managedObjectList.item(i);
-			NamedNodeMap managedObjectAttributes = managedObjectNode.getAttributes();
-			Node distNameAttribute = managedObjectAttributes.getNamedItem("distName");
-			String distNameOldValue = distNameAttribute.getNodeValue();
-			if (distNameOldValue.contains("MRBTS")) {
-				int startIndex = distNameOldValue.indexOf("-");
-				int endIndex = distNameOldValue.indexOf("/");
-				if (endIndex != -1) {
-					String distNameNewValue = distNameOldValue.substring(0, startIndex + 1) + eNodeBId
-							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
-				} else {
-					String distNameNewValue = distNameOldValue.substring(0, startIndex + 1) + eNodeBId;
-					distNameAttribute.setNodeValue(distNameNewValue);
-				}
+			String distNameOldValue = getAttributeValueFromNode(managedObjectNode, "distName");
+			int startIndex = distNameOldValue.indexOf("-");
+			int endIndex = distNameOldValue.indexOf("/");
+			if (endIndex != -1) {
+				String distNameNewValue = distNameOldValue.substring(0, startIndex + 1) + eNodeBId
+						+ distNameOldValue.substring(endIndex);
+				setAttributeValueOfNode(managedObjectNode, "distName", distNameNewValue);
+			} else {
+				String distNameNewValue = distNameOldValue.substring(0, startIndex + 1) + eNodeBId;
+				setAttributeValueOfNode(managedObjectNode, "distName", distNameNewValue);
 			}
 		}
 	}
 
+	private Object getNodeSetObjectFromXmlDocument(String stringExpression) {
+		// XPathFactory is used to create XPath.
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		// XPath enable access to evaluation environment.
+		XPath xPath = xPathFactory.newXPath();
+		// XPathExpression provides access to XPath expressions.
+		XPathExpression expression;
+		Object result = null;
+		try {
+			/*
+			 * First we define expression that say what we want to find in document. Double forward slashes ("//") represent root node in xml. Then we
+			 * drill to node we need separating different nodes with forward slash ("/"). When we get to the node we need, if we want node to have
+			 * specific attribute with some value then we put that attribute in square braces ("[ ]") and precede it with "@" sign.
+			 */
+			expression = xPath.compile(stringExpression);
+			// Result is evaluation of document with defined expression and as output we can demand NodeSet.
+			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		return result;
+	}
+
+	private String getAttributeValueFromNode(Node node, String attributeName) {
+		NamedNodeMap nodeAttributes = node.getAttributes();
+		Node specificAttribute = nodeAttributes.getNamedItem(attributeName);
+		String valueOfAttribute = specificAttribute.getTextContent();
+		return valueOfAttribute;
+	}
+
 	public void editLnbts_eNodeBId(String eNodeBId) {
-		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[contains(@distName, 'LNBTS')]");
 		for (int i = 0; i < managedObjectList.getLength(); i++) {
 			Node managedObjectNode = managedObjectList.item(i);
-			NamedNodeMap managedObjectAttributes = managedObjectNode.getAttributes();
-			Node distNameAttribute = managedObjectAttributes.getNamedItem("distName");
-			String distNameOldValue = distNameAttribute.getNodeValue();
-			if (distNameOldValue.contains("LNBTS")) {
-				int startIndex = distNameOldValue.indexOf("LNBTS") + 6;
-				int endIndex = distNameOldValue.indexOf("/", startIndex);
-				if (endIndex != -1) {
-					String distNameNewValue = distNameOldValue.substring(0, startIndex) + eNodeBId
-							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
-				} else {
-					String distNameNewValue = distNameOldValue.substring(0, startIndex) + eNodeBId;
-					distNameAttribute.setNodeValue(distNameNewValue);
-				}
+			String distNameOldValue = getAttributeValueFromNode(managedObjectNode, "distName");
+			int startIndex = distNameOldValue.indexOf("LNBTS") + 6;
+			int endIndex = distNameOldValue.indexOf("/", startIndex);
+			if (endIndex != -1) {
+				String distNameNewValue = distNameOldValue.substring(0, startIndex) + eNodeBId
+						+ distNameOldValue.substring(endIndex);
+				setAttributeValueOfNode(managedObjectNode, "distName", distNameNewValue);
+			} else {
+				String distNameNewValue = distNameOldValue.substring(0, startIndex) + eNodeBId;
+				setAttributeValueOfNode(managedObjectNode, "distName", distNameNewValue);
 			}
 		}
 	}
 
 	public void editLncellId(LteSite lteSite) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			/*
-			 * Pay attention to expression string, with contains(x, y) we search for y inside x. This string say to search all managedObjects that in
-			 * distName attribute have "LNCEL-" anywhere.
-			 */
-			expression = xPath.compile("//cmData/managedObject[contains(@distName,'LNCEL-')]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList lncelNodeList = (NodeList) result;
+		/*
+		 * Pay attention to expression string, with contains(x, y) we search for y inside x. This string say to search all managedObjects that in
+		 * distName attribute have "LNCEL-" anywhere.
+		 */
+		NodeList lncelNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[contains(@distName,'LNCEL-')]");
 		for (int i = 0; i < lncelNodeList.getLength(); i++) {
 			Node lncelNode = lncelNodeList.item(i);
-			NamedNodeMap managedObjectAttributes = lncelNode.getAttributes();
-			Node distNameAttribute = managedObjectAttributes.getNamedItem("distName");
-			String distNameOldValue = distNameAttribute.getNodeValue();
+			String distNameOldValue = getAttributeValueFromNode(lncelNode, "distName");
 			int startIndex = distNameOldValue.indexOf("LNCEL") + 6;
 			int endIndex = distNameOldValue.indexOf("/", startIndex);
 			if (endIndex != -1) {
@@ -161,25 +178,25 @@ public class XmlCreator {
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
 							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else if (oldCellId.charAt(oldCellId.length() - 1) == '2') {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("2"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
 							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else if (oldCellId.charAt(oldCellId.length() - 1) == '3') {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("3"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
 							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("4"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId
 							+ distNameOldValue.substring(endIndex);
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				}
 			} else {
 				String oldCellId = distNameOldValue.substring(startIndex);
@@ -187,22 +204,22 @@ public class XmlCreator {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("1"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else if (oldCellId.charAt(oldCellId.length() - 1) == '2') {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("2"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else if (oldCellId.charAt(oldCellId.length() - 1) == '3') {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("3"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				} else {
 					LteCell lteCell = lteSite.lteCells.get(String.valueOf("4"));
 					String lncellId = lteCell.cellInfo.get("lnCellId");
 					String distNameNewValue = distNameOldValue.substring(0, startIndex) + lncellId;
-					distNameAttribute.setNodeValue(distNameNewValue);
+					setAttributeValueOfNode(lncelNode, "distName", distNameNewValue);
 				}
 			}
 
@@ -210,59 +227,43 @@ public class XmlCreator {
 	}
 
 	public void editBtsscl_BtsId_BtsName(String eNodeBId, String siteCode, boolean isSharing) {
-		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NamedNodeMap managedObjectAttributes = managedObjectNode.getAttributes();
-			Node classNameAttribute = managedObjectAttributes.getNamedItem("class");
-			String classNameValue = classNameAttribute.getNodeValue();
-			if (classNameValue.equals("BTSSCL")) {
-				NodeList childNodesList = managedObjectNode.getChildNodes();
-				for (int j = 0; j < childNodesList.getLength(); j++) {
-					Node childNode = childNodesList.item(j);
-					if (childNode.getNodeName().equals("p")) {
-						NamedNodeMap childNodeAttributes = childNode.getAttributes();
-						Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-						String nameNodeValue = nameNodeAttribute.getNodeValue();
-						if (nameNodeValue.equals("btsId")) {
-							childNode.setTextContent(eNodeBId);
-						} else if (nameNodeValue.equals("btsName")) {
-							childNode.setTextContent(siteCode);
-						} else if (nameNodeValue.equals("rfSharingEnabled")) {
-							if (isSharing) {
-								childNode.setTextContent("true");
-							} else {
-								childNode.setTextContent("false");
-							}
-						}
-					}
+		NodeList pNodeList = (NodeList) getNodeSetObjectFromXmlDocument("//cmData/managedObject[@class=\"BTSSCL\"]/p");
+		for (int i = 0; i < pNodeList.getLength(); i++) {
+			Node pNode = pNodeList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(pNode, "name");
+			if (nameNodeValue.equals("btsId")) {
+				pNode.setTextContent(eNodeBId);
+			} else if (nameNodeValue.equals("btsName")) {
+				pNode.setTextContent(siteCode);
+			} else if (nameNodeValue.equals("rfSharingEnabled")) {
+				if (isSharing) {
+					pNode.setTextContent("true");
+				} else {
+					pNode.setTextContent("false");
 				}
 			}
 		}
 	}
 
 	public void editLnbts_EnbName(String siteCode) {
-		NodeList managedObjectList = xmlDocument.getElementsByTagName("managedObject");
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NamedNodeMap managedObjectAttributes = managedObjectNode.getAttributes();
-			Node classNameAttribute = managedObjectAttributes.getNamedItem("class");
-			String classNameValue = classNameAttribute.getNodeValue();
-			if (classNameValue.equals("LNBTS")) {
-				NodeList childNodesList = managedObjectNode.getChildNodes();
-				for (int j = 0; j < childNodesList.getLength(); j++) {
-					Node childNode = childNodesList.item(j);
-					if (childNode.getNodeName().equals("p")) {
-						NamedNodeMap childNodeAttributes = childNode.getAttributes();
-						Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-						String nameNodeValue = nameNodeAttribute.getNodeValue();
-						if (nameNodeValue.equals("enbName")) {
-							childNode.setTextContent(siteCode);
-						}
-					}
-				}
-			}
+		Node pNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"LNBTS\"]/p[@name=\"enbName\"]");
+		pNode.setTextContent(siteCode);
+	}
+
+	private Object getNodeObjectFromXmlDocument(String stringExpression) {
+		XPathFactory xPathFactory = XPathFactory.newInstance();
+		XPath xPath = xPathFactory.newXPath();
+		XPathExpression expression;
+		Object result = null;
+		try {
+			expression = xPath.compile(stringExpression);
+			// Result is evaluation of document with defined expression and as output we can demand Node.
+			result = expression.evaluate(xmlDocument, XPathConstants.NODE);
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
 		}
+		return result;
 	}
 
 	public void editLnadjg_cellParameters(GsmNeighbour gsmNeighbour, String eNodeBId, String counter) {
@@ -324,111 +325,51 @@ public class XmlCreator {
 		managedObject.appendChild(p11);
 		managedObject.appendChild(p12);
 		managedObject.appendChild(p13);
-		// XPathFactory is used to create XPath.
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		// XPath enable access to evaluation environment.
-		XPath xPath = xPathFactory.newXPath();
-		// XPathExpression provides access to XPath expressions.
-		XPathExpression expression;
-		Object result = null;
-		try {
-			/*
-			 * First we define expression that say what we want to find in document. Double forward slashes ("//") represent root node in xml. Then we
-			 * drill to node we need separating different nodes with forward slash ("/"). When we get to the node we need, if we want node to have
-			 * specific attribute with some value then we put that attribute in square braces ("[ ]") and precede it with "@" sign.
-			 */
-			expression = xPath.compile("//cmData/managedObject[@class=\"LNCEL\"]");
-			// Result is evaluation of document with defined expression and as output we can demand NodeSet.
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		Node firstManagedObject = managedObjectList.item(0);
+		Node firstManagedObject = (Node) getNodeObjectFromXmlDocument("//cmData/managedObject[@class=\"LNCEL\"]");
 		firstManagedObject.getParentNode().insertBefore(managedObject, firstManagedObject);
 	}
 
 	public void editLncel_cellParameters(LteCell lteCell, String eNodeBId) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			// This is case when expression represent search for node with 2 specific attributes.
-			expression = xPath.compile("//cmData/managedObject[@class=\"LNCEL\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/LNCEL-" + lteCell.cellInfo.get("lnCellId") + "\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodesList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodesList.getLength(); j++) {
-				Node childNode = childNodesList.item(j);
-				if (childNode.getNodeName().equals("p")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("dlChBw")) {
-						childNode.setTextContent(lteCell.cellInfo.get("channelBw"));
-					} else if (nameNodeValue.equals("earfcnDL")) {
-						childNode.setTextContent(lteCell.cellInfo.get("dlEarfcn"));
-					} else if (nameNodeValue.equals("earfcnUL")) {
-						String dlEarfcn = lteCell.cellInfo.get("dlEarfcn");
-						int ulEarfcn = Integer.valueOf(dlEarfcn) + 18000;
-						childNode.setTextContent(String.valueOf(ulEarfcn));
-					} else if (nameNodeValue.equals("pMax")) {
-						childNode.setTextContent(lteCell.cellInfo.get("maxPower"));
-					} else if (nameNodeValue.equals("phyCellId")) {
-						childNode.setTextContent(lteCell.cellInfo.get("pci"));
-					} else if (nameNodeValue.equals("rootSeqIndex")) {
-						childNode.setTextContent(lteCell.cellInfo.get("rootSeqIndex"));
-					} else if (nameNodeValue.equals("tac")) {
-						childNode.setTextContent(lteCell.cellInfo.get("tac"));
-					} else if (nameNodeValue.equals("ulChBw")) {
-						childNode.setTextContent(lteCell.cellInfo.get("channelBw"));
-					} else if (nameNodeValue.equals("cellName")) {
-						childNode.setTextContent(lteCell.cellInfo.get("cellName"));
-					}
-				}
+		// This is case when expression represent search for node with 2 specific attributes.
+		NodeList pList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"LNCEL\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/LNCEL-" + lteCell.cellInfo.get("lnCellId") + "\"]/p");
+		for (int i = 0; i < pList.getLength(); i++) {
+			Node pNode = pList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(pNode, "name");
+			if (nameNodeValue.equals("dlChBw")) {
+				pNode.setTextContent(lteCell.cellInfo.get("channelBw"));
+			} else if (nameNodeValue.equals("earfcnDL")) {
+				pNode.setTextContent(lteCell.cellInfo.get("dlEarfcn"));
+			} else if (nameNodeValue.equals("earfcnUL")) {
+				String dlEarfcn = lteCell.cellInfo.get("dlEarfcn");
+				int ulEarfcn = Integer.valueOf(dlEarfcn) + 18000;
+				pNode.setTextContent(String.valueOf(ulEarfcn));
+			} else if (nameNodeValue.equals("pMax")) {
+				pNode.setTextContent(lteCell.cellInfo.get("maxPower"));
+			} else if (nameNodeValue.equals("phyCellId")) {
+				pNode.setTextContent(lteCell.cellInfo.get("pci"));
+			} else if (nameNodeValue.equals("rootSeqIndex")) {
+				pNode.setTextContent(lteCell.cellInfo.get("rootSeqIndex"));
+			} else if (nameNodeValue.equals("tac")) {
+				pNode.setTextContent(lteCell.cellInfo.get("tac"));
+			} else if (nameNodeValue.equals("ulChBw")) {
+				pNode.setTextContent(lteCell.cellInfo.get("channelBw"));
+			} else if (nameNodeValue.equals("cellName")) {
+				pNode.setTextContent(lteCell.cellInfo.get("cellName"));
 			}
 		}
 	}
 
 	public void editGnfl_BcchUnique(String eNodeBId, String lnCellId, Set<String> uniqueBcchOfNeighbours) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"GNFL\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/LNCEL-" + lnCellId + "/GFIM-1/GNFL-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodesList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodesList.getLength(); j++) {
-				Node childNode = childNodesList.item(j);
-				if (childNode.getNodeName().equals("list")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("gerArfcnVal")) {
-						removeChildsFrom(childNode);
-						for (String bcch : uniqueBcchOfNeighbours) {
-							Element p = xmlDocument.createElement("p");
-							p.setTextContent(bcch);
-							childNode.appendChild(p);
-						}
-					}
-				}
-			}
+		Node listNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"GNFL\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/LNCEL-" + lnCellId + "/GFIM-1/GNFL-1\"]/list[@name=\"gerArfcnVal\"]");
+		removeChildsFrom(listNode);
+		for (String bcch : uniqueBcchOfNeighbours) {
+			Element p = xmlDocument.createElement("p");
+			p.setTextContent(bcch);
+			listNode.appendChild(p);
 		}
 	}
 
@@ -439,37 +380,14 @@ public class XmlCreator {
 	}
 
 	public void editLnhog_BcchUnique(String eNodeBId, String lnCellId, Set<String> uniqueBcchOfNeighbours) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"LNHOG\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/LNCEL-" + lnCellId + "/LNHOG-0\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodesList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodesList.getLength(); j++) {
-				Node childNode = childNodesList.item(j);
-				if (childNode.getNodeName().equals("list")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("arfcnValueListGERAN")) {
-						removeChildsFrom(childNode);
-						for (String bcch : uniqueBcchOfNeighbours) {
-							Element p = xmlDocument.createElement("p");
-							p.setTextContent(bcch);
-							childNode.appendChild(p);
-						}
-					}
-				}
-			}
+		Node listNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"LNHOG\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/LNCEL-" + lnCellId + "/LNHOG-0\"]/list[@name=\"arfcnValueListGERAN\"]");
+		removeChildsFrom(listNode);
+		for (String bcch : uniqueBcchOfNeighbours) {
+			Element p = xmlDocument.createElement("p");
+			p.setTextContent(bcch);
+			listNode.appendChild(p);
 		}
 	}
 
@@ -522,18 +440,9 @@ public class XmlCreator {
 		managedObject.appendChild(p5);
 		managedObject.appendChild(p6);
 		managedObject.appendChild(list);
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"REDRT\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/LNCEL-" + lnCellId + "/REDRT-0\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"REDRT\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/LNCEL-" + lnCellId + "/REDRT-0\"]");
 		Node firstManagedObject = null;
 		for (int i = 0; i < managedObjectList.getLength(); i++) {
 			firstManagedObject = managedObjectList.item(i);
@@ -545,37 +454,14 @@ public class XmlCreator {
 	}
 
 	public void editRedrt_BcchUnique(String eNodeBId, String lnCellId, Set<String> uniqueBcchOfNeighbours) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"REDRT\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/LNCEL-" + lnCellId + "/REDRT-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodesList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodesList.getLength(); j++) {
-				Node childNode = childNodesList.item(j);
-				if (childNode.getNodeName().equals("list")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("redirGeranArfcnValueL")) {
-						removeChildsFrom(childNode);
-						for (String bcch : uniqueBcchOfNeighbours) {
-							Element p = xmlDocument.createElement("p");
-							p.setTextContent(bcch);
-							childNode.appendChild(p);
-						}
-					}
-				}
-			}
+		Node listNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"REDRT\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/LNCEL-" + lnCellId + "/REDRT-1\"]/list[@name=\"redirGeranArfcnValueL\"]");
+		removeChildsFrom(listNode);
+		for (String bcch : uniqueBcchOfNeighbours) {
+			Element p = xmlDocument.createElement("p");
+			p.setTextContent(bcch);
+			listNode.appendChild(p);
 		}
 	}
 
@@ -638,48 +524,16 @@ public class XmlCreator {
 		managedObject.appendChild(p3);
 		managedObject.appendChild(p4);
 		managedObject.appendChild(list);
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath
-					.compile("//cmData/managedObject[@class=\"SMOD\" and @distName=\"MRBTS-" + eNodeBId + "/SMOD-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"SMOD\" and @distName=\"MRBTS-" + eNodeBId + "/SMOD-1\"]");
 		Node firstManagedObject = managedObjectList.item(0);
 		firstManagedObject.getParentNode().insertBefore(managedObject, firstManagedObject);
 	}
 
 	public void editLteSmod_SiteName(String eNodeBId, String siteName) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath
-					.compile("//cmData/managedObject[@class=\"SMOD\" and @distName=\"MRBTS-" + eNodeBId + "/SMOD-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodesList = managedObjectNode.getChildNodes();
-		for (int j = 0; j < childNodesList.getLength(); j++) {
-			Node childNode = childNodesList.item(j);
-			if (childNode.getNodeName().equals("p")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("moduleLocation")) {
-					childNode.setTextContent(siteName);
-				}
-			}
-		}
+		Node pNode = (Node) getNodeObjectFromXmlDocument("//cmData/managedObject[@class=\"SMOD\" and @distName=\"MRBTS-"
+				+ eNodeBId + "/SMOD-1\"]/p[@name=\"moduleLocation\"]");
+		pNode.setTextContent(siteName);
 	}
 
 	public void editGsmSmod_SiteName(String eNodeBId) {
@@ -742,134 +596,63 @@ public class XmlCreator {
 		managedObject.appendChild(p1);
 		managedObject.appendChild(p2);
 		managedObject.appendChild(list);
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile(
-					"//cmData/managedObject[@class=\"TRBLCADM\" and @distName=\"MRBTS-" + eNodeBId + "/TRBLCADM-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"TRBLCADM\" and @distName=\"MRBTS-" + eNodeBId + "/TRBLCADM-1\"]");
 		Node firstManagedObject = managedObjectList.item(0);
 		firstManagedObject.getParentNode().insertBefore(managedObject, firstManagedObject);
 	}
 
 	public void editFtm_SiteCode(String eNodeBId, String siteCode, String siteName) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"FTM\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/FTM-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodeList = managedObjectNode.getChildNodes();
-		for (int i = 0; i < childNodeList.getLength(); i++) {
-			Node childNode = childNodeList.item(i);
-			if (childNode.getNodeName().equals("p")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("systemTitle")) {
-					childNode.setTextContent(siteCode);
-				} else if (nameNodeValue.equals("locationName")) {
-					childNode.setTextContent(siteName);
-				}
+		NodeList pNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"FTM\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/FTM-1\"]/p");
+		for (int i = 0; i < pNodeList.getLength(); i++) {
+			Node pNode = pNodeList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(pNode, "name");
+			if (nameNodeValue.equals("systemTitle")) {
+				pNode.setTextContent(siteCode);
+			} else if (nameNodeValue.equals("locationName")) {
+				pNode.setTextContent(siteName);
 			}
 		}
 	}
 
 	public void editIpno(LteSite lteSite) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
 		String eNodeBId = lteSite.generalInfo.get("eNodeBId");
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/FTM-1/IPNO-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodeList = managedObjectNode.getChildNodes();
-		for (int i = 0; i < childNodeList.getLength(); i++) {
-			Node childNode = childNodeList.item(i);
-			if (childNode.getNodeName().equals("p")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("mPlaneIpAddress")) {
-					childNode.setTextContent(lteSite.transmission.get("mIp"));
-				} else if (nameNodeValue.equals("uPlaneIpAddress") | nameNodeValue.equals("cPlaneIpAddress")) {
-					childNode.setTextContent(lteSite.transmission.get("cuDestIp"));
-				} else if (nameNodeValue.equals("sPlaneIpAddress")) {
-					childNode.setTextContent(lteSite.transmission.get("sIp"));
-				} else if (nameNodeValue.equals("btsId")) {
-					childNode.setTextContent(eNodeBId);
-				}
+		NodeList pList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/FTM-1/IPNO-1\"]/p");
+		for (int i = 0; i < pList.getLength(); i++) {
+			Node childNode = pList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(childNode, "name");
+			if (nameNodeValue.equals("mPlaneIpAddress")) {
+				childNode.setTextContent(lteSite.transmission.get("mIp"));
+			} else if (nameNodeValue.equals("uPlaneIpAddress") | nameNodeValue.equals("cPlaneIpAddress")) {
+				childNode.setTextContent(lteSite.transmission.get("cuDestIp"));
+			} else if (nameNodeValue.equals("sPlaneIpAddress")) {
+				childNode.setTextContent(lteSite.transmission.get("sIp"));
+			} else if (nameNodeValue.equals("btsId")) {
+				childNode.setTextContent(eNodeBId);
 			}
 		}
 	}
 
 	public void editTwamp(String cuDestIp) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"TWAMP\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodeList = managedObjectNode.getChildNodes();
-		for (int i = 0; i < childNodeList.getLength(); i++) {
-			Node childNode = childNodeList.item(i);
-			if (childNode.getNodeName().equals("p")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
-				if (nameNodeValue.equals("sourceIpAddress")) {
-					childNode.setTextContent(cuDestIp);
-				}
-			}
-		}
+		Node pNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"TWAMP\"]/p[@name=\"sourceIpAddress\"]");
+		pNode.setTextContent(cuDestIp);
 	}
 
+	// TODO Srediti metod uvodjenjem detaljnijih XPath izraza.
 	public void editIprt(LteSite lteSite) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"IPRT\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
+		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"IPRT\"]");
 		Node managedObjectNode = managedObjectList.item(0);
 		NodeList childNodeList = managedObjectNode.getChildNodes();
 		for (int i = 0; i < childNodeList.getLength(); i++) {
 			Node childNode = childNodeList.item(i);
 			if (childNode.getNodeName().equals("list")) {
-				NamedNodeMap childNodeAttributes = childNode.getAttributes();
-				Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-				String nameNodeValue = nameNodeAttribute.getNodeValue();
+				String nameNodeValue = getAttributeValueFromNode(childNode, "name");
 				if (nameNodeValue.equals("staticRoutes")) {
 					NodeList itemNodeList = childNode.getChildNodes();
 					for (int m = 0; m < itemNodeList.getLength(); m++) {
@@ -879,17 +662,13 @@ public class XmlCreator {
 							for (int j = 0; j < pNodeList.getLength(); j++) {
 								Node pNode = pNodeList.item(j);
 								if (pNode.getNodeName().equals("p")) {
-									NamedNodeMap pNodeAttribute = pNode.getAttributes();
-									Node pNameNodeAttribute = pNodeAttribute.getNamedItem("name");
-									String pNameNodeValue = pNameNodeAttribute.getNodeValue();
+									String pNameNodeValue = getAttributeValueFromNode(pNode, "name");
 									if (pNameNodeValue.equals("destIpAddr")) {
 										if (pNode.getTextContent().equals("0.0.0.0")) {
 											for (int k = 0; k < pNodeList.getLength(); k++) {
 												Node pNode2 = pNodeList.item(k);
 												if (pNode2.getNodeName().equals("p")) {
-													NamedNodeMap pNodeAttribute2 = pNode2.getAttributes();
-													Node pNameNodeAttribute2 = pNodeAttribute2.getNamedItem("name");
-													String pNameNodeValue2 = pNameNodeAttribute2.getNodeValue();
+													String pNameNodeValue2 = getAttributeValueFromNode(pNode2, "name");
 													if (pNameNodeValue2.equals("gateway")) {
 														pNode2.setTextContent(lteSite.transmission.get("cuGwIp"));
 													}
@@ -900,9 +679,7 @@ public class XmlCreator {
 											for (int k = 0; k < pNodeList.getLength(); k++) {
 												Node pNode3 = pNodeList.item(k);
 												if (pNode3.getNodeName().equals("p")) {
-													NamedNodeMap pNodeAttribute3 = pNode3.getAttributes();
-													Node pNameNodeAttribute3 = pNodeAttribute3.getNamedItem("name");
-													String pNameNodeValue3 = pNameNodeAttribute3.getNodeValue();
+													String pNameNodeValue3 = getAttributeValueFromNode(pNode3, "name");
 													if (pNameNodeValue3.equals("gateway")) {
 														pNode3.setTextContent(lteSite.transmission.get("sGwIp"));
 													}
@@ -920,133 +697,49 @@ public class XmlCreator {
 	}
 
 	public void editIvif1(LteSite lteSite) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
 		String eNodeBId = lteSite.generalInfo.get("eNodeBId");
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"IVIF\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/FTM-1/IPNO-1/IEIF-1/IVIF-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodeList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodeList.getLength(); j++) {
-				Node childNode = childNodeList.item(j);
-				if (childNode.getNodeName().equals("p")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("vlanId")) {
-						childNode.setTextContent(lteSite.transmission.get("sVlanId"));
-					} else if (nameNodeValue.equals("localIpAddr")) {
-						childNode.setTextContent(lteSite.transmission.get("sIp"));
-					} else if (nameNodeValue.equals("netmask")) {
-						childNode.setTextContent(lteSite.transmission.get("sSubnet"));
-					}
-				}
+		NodeList pNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"IVIF\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/FTM-1/IPNO-1/IEIF-1/IVIF-1\"]/p");
+		for (int i = 0; i < pNodeList.getLength(); i++) {
+			Node pNode = pNodeList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(pNode, "name");
+			if (nameNodeValue.equals("vlanId")) {
+				pNode.setTextContent(lteSite.transmission.get("sVlanId"));
+			} else if (nameNodeValue.equals("localIpAddr")) {
+				pNode.setTextContent(lteSite.transmission.get("sIp"));
+			} else if (nameNodeValue.equals("netmask")) {
+				pNode.setTextContent(lteSite.transmission.get("sSubnet"));
 			}
 		}
 	}
 
 	public void editIvif2(LteSite lteSite) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
 		String eNodeBId = lteSite.generalInfo.get("eNodeBId");
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"IVIF\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/FTM-1/IPNO-1/IEIF-1/IVIF-2\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodeList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodeList.getLength(); j++) {
-				Node childNode = childNodeList.item(j);
-				if (childNode.getNodeName().equals("p")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("vlanId")) {
-						childNode.setTextContent(lteSite.transmission.get("cuVlanId"));
-					} else if (nameNodeValue.equals("localIpAddr")) {
-						childNode.setTextContent(lteSite.transmission.get("cuDestIp"));
-					} else if (nameNodeValue.equals("netmask")) {
-						childNode.setTextContent(lteSite.transmission.get("cuSubnet"));
-					}
-				}
+		NodeList pNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"IVIF\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/FTM-1/IPNO-1/IEIF-1/IVIF-2\"]/p");
+		for (int i = 0; i < pNodeList.getLength(); i++) {
+			Node pNode = pNodeList.item(i);
+			String nameNodeValue = getAttributeValueFromNode(pNode, "name");
+			if (nameNodeValue.equals("vlanId")) {
+				pNode.setTextContent(lteSite.transmission.get("cuVlanId"));
+			} else if (nameNodeValue.equals("localIpAddr")) {
+				pNode.setTextContent(lteSite.transmission.get("cuDestIp"));
+			} else if (nameNodeValue.equals("netmask")) {
+				pNode.setTextContent(lteSite.transmission.get("cuSubnet"));
 			}
 		}
 	}
 
 	public void editTopf(String eNodeBId, String topIp) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"TOPF\" and @distName=\"MRBTS-" + eNodeBId
-					+ "/LNBTS-" + eNodeBId + "/FTM-1/TOPB-1/TOPF-1\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList managedObjectList = (NodeList) result;
-		for (int i = 0; i < managedObjectList.getLength(); i++) {
-			Node managedObjectNode = managedObjectList.item(i);
-			NodeList childNodeList = managedObjectNode.getChildNodes();
-			for (int j = 0; j < childNodeList.getLength(); j++) {
-				Node childNode = childNodeList.item(j);
-				if (childNode.getNodeName().equals("list")) {
-					NamedNodeMap childNodeAttributes = childNode.getAttributes();
-					Node nameNodeAttribute = childNodeAttributes.getNamedItem("name");
-					String nameNodeValue = nameNodeAttribute.getNodeValue();
-					if (nameNodeValue.equals("topMasters")) {
-						NodeList itemNodeList = childNode.getChildNodes();
-						for (int k = 0; k < itemNodeList.getLength(); k++) {
-							Node itemNode = itemNodeList.item(k);
-							if (itemNode.getNodeName().equals("item")) {
-								NodeList pList = itemNode.getChildNodes();
-								for (int l = 0; l < pList.getLength(); l++) {
-									Node pNode = pList.item(l);
-									if (pNode.getNodeName().equals("p")) {
-										NamedNodeMap pNodeAttributes = pNode.getAttributes();
-										Node pNameNodeAttribute = pNodeAttributes.getNamedItem("name");
-										String pNameNodeValue = pNameNodeAttribute.getNodeValue();
-										if (pNameNodeValue.equals("masterIpAddr")) {
-											pNode.setTextContent(topIp);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		Node pNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"TOPF\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+						+ "/FTM-1/TOPB-1/TOPF-1\"]/list[@name=\"topMasters\"]/item/p[@name=\"masterIpAddr\"]");
+		pNode.setTextContent(topIp);
 	}
 
 	public void editLcell_AnttenaPorts(String cellPorts) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"LCELL\"]/list/item");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
 		String[] antPort = new String[] { "1", "3", "7", "9", "13", "15" };
 		if (cellPorts.equals("1-1")) {
 			antPort[0] = "1";
@@ -1056,16 +749,15 @@ public class XmlCreator {
 			antPort[4] = "5";
 			antPort[5] = "11";
 		}
-		NodeList itemList = (NodeList) result;
+		NodeList itemList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"LCELL\"]/list/item");
 		for (int i = 0; i < itemList.getLength(); i++) {
 			Node itemNode = itemList.item(i);
 			NodeList childNodeList = itemNode.getChildNodes();
 			for (int j = 0; j < childNodeList.getLength(); j++) {
 				Node childNode = childNodeList.item(j);
 				if (childNode.getNodeName().equals("p")) {
-					NamedNodeMap pNodeAttributes = childNode.getAttributes();
-					Node pNameNodeAttribute = pNodeAttributes.getNamedItem("name");
-					String pNameNodeValue = pNameNodeAttribute.getNodeValue();
+					String pNameNodeValue = getAttributeValueFromNode(childNode, "name");
 					if (pNameNodeValue.equals("antlId")) {
 						childNode.setTextContent(antPort[i]);
 					}
@@ -1075,31 +767,12 @@ public class XmlCreator {
 	}
 
 	public void isFtifUsed(boolean ftifIsUsed) {
-		Document ftifDocument = null;
 		if (ftifIsUsed) {
-			DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-			builderFactory.setIgnoringComments(true);
-			try {
-				DocumentBuilder builder = builderFactory.newDocumentBuilder();
-				ftifDocument = builder.parse(ftifFile);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			XPathFactory xPathFactory = XPathFactory.newInstance();
-			XPath xPath = xPathFactory.newXPath();
-			XPathExpression expressionOfFtifNodes, expressionOfReferenceNode;
-			Object resultOfFtifNodes = null, resultOfReferenceNode = null;
-			try {
-				expressionOfFtifNodes = xPath.compile("//cmData/managedObject");
-				expressionOfReferenceNode = xPath
-						.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
-				resultOfReferenceNode = expressionOfReferenceNode.evaluate(xmlDocument, XPathConstants.NODE);
-				resultOfFtifNodes = expressionOfFtifNodes.evaluate(ftifDocument, XPathConstants.NODESET);
-			} catch (XPathExpressionException e) {
-				e.printStackTrace();
-			}
-			Node referenceNode = (Node) resultOfReferenceNode;
-			NodeList managedObjectNodeList = (NodeList) resultOfFtifNodes;
+			Document ftifDocument = createXmlDocumentFromFile(ftifFile);
+			Node referenceNode = (Node) getNodeObjectFromXmlDocument(
+					"//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
+			NodeList managedObjectNodeList = (NodeList) getNodeSetObjectFromSpecifiedDocument(ftifDocument,
+					"//cmData/managedObject");
 			for (int i = 0; i < managedObjectNodeList.getLength(); i++) {
 				Element managedObjectElement = (Element) managedObjectNodeList.item(i);
 				/*
@@ -1121,26 +794,39 @@ public class XmlCreator {
 		}
 	}
 
-	private void moveFtifNodesToSpecificPosition() {
+	public Document createXmlDocumentFromFile(File file) {
+		DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+		builderFactory.setIgnoringComments(true);
+		Document xmlDocument = null;
+		try {
+			DocumentBuilder builder = builderFactory.newDocumentBuilder();
+			xmlDocument = builder.parse(file);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return xmlDocument;
+	}
+
+	private Object getNodeSetObjectFromSpecifiedDocument(Document document, String stringExpression) {
 		XPathFactory xPathFactory = XPathFactory.newInstance();
 		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expressionOfReferenceNode, expressionOfPpttNode, expressionOfEthlkNode;
-		Object resultOfReferenceNode = null, resultOfPpttNode = null, resultOfEthlkNode = null;
+		XPathExpression expression;
+		Object result = null;
 		try {
-			expressionOfReferenceNode = xPath
-					.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
-			expressionOfPpttNode = xPath.compile("//cmData/managedObject[@class=\"PPTT\"]");
-			expressionOfEthlkNode = xPath
-					.compile("//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-1-')]");
-			resultOfReferenceNode = expressionOfReferenceNode.evaluate(xmlDocument, XPathConstants.NODE);
-			resultOfPpttNode = expressionOfPpttNode.evaluate(xmlDocument, XPathConstants.NODESET);
-			resultOfEthlkNode = expressionOfEthlkNode.evaluate(xmlDocument, XPathConstants.NODESET);
+			expression = xPath.compile(stringExpression);
+			result = expression.evaluate(document, XPathConstants.NODESET);
 		} catch (XPathExpressionException e) {
 			e.printStackTrace();
 		}
-		Node referenceNode = (Node) resultOfReferenceNode;
-		NodeList ppttNodeList = (NodeList) resultOfPpttNode;
-		NodeList ethlkNodeList = (NodeList) resultOfEthlkNode;
+		return result;
+	}
+
+	private void moveFtifNodesToSpecificPosition() {
+		Node referenceNode = (Node) getNodeObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-0-1')]");
+		NodeList ppttNodeList = (NodeList) getNodeSetObjectFromXmlDocument("//cmData/managedObject[@class=\"PPTT\"]");
+		NodeList ethlkNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"ETHLK\" and contains(@distName,'ETHLK-1-')]");
 		for (int i = 0; i < ppttNodeList.getLength(); i++) {
 			Node ppttNode = ppttNodeList.item(i);
 			referenceNode.getParentNode().insertBefore(ppttNode, referenceNode);
@@ -1152,25 +838,13 @@ public class XmlCreator {
 	}
 
 	private void editUnit() {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"UNIT\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList unitNodeList = (NodeList) result;
+		NodeList unitNodeList = (NodeList) getNodeSetObjectFromXmlDocument("//cmData/managedObject[@class=\"UNIT\"]");
 		Node unitNode = unitNodeList.item(0);
 		NodeList pNodeList = unitNode.getChildNodes();
 		for (int i = 0; i < pNodeList.getLength(); i++) {
 			Node pNode = pNodeList.item(i);
 			if (pNode.getNodeName().equals("p")) {
-				NamedNodeMap pAttributes = pNode.getAttributes();
-				Node pNameAttribute = pAttributes.getNamedItem("name");
-				String pNameValue = pNameAttribute.getNodeValue();
+				String pNameValue = getAttributeValueFromNode(pNode, "name");
 				if (pNameValue.equals("unitTypeExpected")) {
 					pNode.setTextContent("472311A");
 				}
@@ -1179,17 +853,7 @@ public class XmlCreator {
 	}
 
 	public void editNumberOfAntenna(int numberOfRfModules) {
-		XPathFactory xPathFactory = XPathFactory.newInstance();
-		XPath xPath = xPathFactory.newXPath();
-		XPathExpression expression;
-		Object result = null;
-		try {
-			expression = xPath.compile("//cmData/managedObject[@class=\"ANTL\"]");
-			result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			e.printStackTrace();
-		}
-		NodeList antlNodeList = (NodeList) result;
+		NodeList antlNodeList = (NodeList) getNodeSetObjectFromXmlDocument("//cmData/managedObject[@class=\"ANTL\"]");
 		int numberOfAntenna = numberOfRfModules * 6;
 		for (int i = numberOfAntenna; i < antlNodeList.getLength(); i++) {
 			Node antlNode = antlNodeList.item(i);
@@ -1210,6 +874,7 @@ public class XmlCreator {
 		}
 	}
 
+	// TODO Napisati test i uraditi refactoring.
 	// Nema test u "TestAllConfigFiles-u" jer je samo za BG regiju. Provereno kroz koriscenje programa.
 	public void editIpno_Twamp(LteSite lteSite) {
 		String siteName = lteSite.generalInfo.get("LocationId");
@@ -1218,27 +883,16 @@ public class XmlCreator {
 			isBgArea = true;
 		}
 		if (isBgArea) {
-			XPathFactory xPathFactory = XPathFactory.newInstance();
-			XPath xPath = xPathFactory.newXPath();
-			XPathExpression expression;
-			Object result = null;
 			String eNodeBId = lteSite.generalInfo.get("eNodeBId");
-			try {
-				expression = xPath.compile("//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId
-						+ "/LNBTS-" + eNodeBId + "/FTM-1/IPNO-1\"]");
-				result = expression.evaluate(xmlDocument, XPathConstants.NODESET);
-			} catch (XPathExpressionException e) {
-				e.printStackTrace();
-			}
-			NodeList managedObjectList = (NodeList) result;
+			NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+					"//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
+							+ "/FTM-1/IPNO-1\"]");
 			Node managedObjectNode = managedObjectList.item(0);
 			NodeList childNodeList = managedObjectNode.getChildNodes();
 			for (int i = 0; i < childNodeList.getLength(); i++) {
 				Node childNode = childNodeList.item(i);
 				if (childNode.getNodeName().equals("list")) {
-					NamedNodeMap childAttributes = childNode.getAttributes();
-					Node childNameAttribute = childAttributes.getNamedItem("name");
-					String childNameValue = childNameAttribute.getNodeValue();
+					String childNameValue = getAttributeValueFromNode(childNode, "name");
 					if (childNameValue.equals("twampFlag")) {
 						NodeList itemNodeList = childNode.getChildNodes();
 						for (int j = 0; j < itemNodeList.getLength(); j++) {
@@ -1248,9 +902,7 @@ public class XmlCreator {
 								for (int k = 0; k < pNodeList.getLength(); k++) {
 									Node pNode = pNodeList.item(k);
 									if (pNode.getNodeName().equals("p")) {
-										NamedNodeMap pNodeAttributes = pNode.getAttributes();
-										Node pNameAttribute = pNodeAttributes.getNamedItem("name");
-										String pNameValue = pNameAttribute.getNodeValue();
+										String pNameValue = getAttributeValueFromNode(pNode, "name");
 										if (pNameValue.equals("twampIpAddress")) {
 											pNode.setTextContent(lteSite.transmission.get("cuDestIp"));
 										}

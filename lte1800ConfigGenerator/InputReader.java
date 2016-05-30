@@ -42,76 +42,87 @@ public class InputReader {
 	}
 
 	public void readTransmissionFile(List<LteSite> listOfSites) {
+		XSSFWorkbook workbook = null;
 		try {
-			OPCPackage opcPackage = OPCPackage.open(transmissionInput);
-			XSSFWorkbook workbook = new XSSFWorkbook(opcPackage);
-			try {
-				XSSFSheet sheet1 = workbook.getSheetAt(0);
-				int numberOfRows = sheet1.getLastRowNum();
-				DataFormatter dataFormatter = new DataFormatter();
-				for (int i = 2; i <= numberOfRows; i++) {
-					Row row = sheet1.getRow(i);
-					LteSite tempLteSite = createTempLteSite();
-					int cellColumn = 0;
-					Cell cell;
-					for (Map.Entry<String, String> entry : tempLteSite.generalInfo.entrySet()) {
-						cell = row.getCell(cellColumn);
-						cellColumn++;
-						entry.setValue(dataFormatter.formatCellValue(cell));
-					}
-					for (Map.Entry<String, String> entry : tempLteSite.transmission.entrySet()) {
-						cell = row.getCell(cellColumn);
-						cellColumn++;
-						entry.setValue(dataFormatter.formatCellValue(cell));
-					}
-					listOfSites.add(tempLteSite);
-				}
-			} finally {
-				workbook.close();
+			workbook = createExcelWorkbook(transmissionInput);
+			XSSFSheet sheet1 = workbook.getSheetAt(0);
+			int numberOfRows = sheet1.getLastRowNum();
+			for (int i = 2; i <= numberOfRows; i++) {
+				Row fromRow = sheet1.getRow(i);
+				LteSite tempLteSite = createTempLteSite();
+				populateDataIntoMap(tempLteSite.generalInfo, fromRow, 0);
+				populateDataIntoMap(tempLteSite.transmission, fromRow, 3);
+				listOfSites.add(tempLteSite);
 			}
-		} catch (IOException | InvalidFormatException e) {
-			e.printStackTrace();
+			// This is idiom how to close a File.
+		} finally {
+			if (workbook != null) {
+				try {
+					workbook.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
-	public LteSite createTempLteSite() {
+	private XSSFWorkbook createExcelWorkbook(File fromFile) {
+		OPCPackage opcPackage;
+		XSSFWorkbook workbook = null;
+		try {
+			opcPackage = OPCPackage.open(fromFile);
+			workbook = new XSSFWorkbook(opcPackage);
+		} catch (InvalidFormatException | IOException e) {
+			e.printStackTrace();
+		}
+		return workbook;
+	}
+
+	private LteSite createTempLteSite() {
 		LteSite tempLteSite = new LteSite();
 		tempLteSite.createInitialGeneralInfoMap();
 		tempLteSite.createInitialTransmissionMap();
 		return tempLteSite;
 	}
 
+	private void populateDataIntoMap(Map<String, String> mapToPopulate, Row row, int cellColumn) {
+		DataFormatter dataFormatter = new DataFormatter();
+		Cell cell;
+		for (Map.Entry<String, String> entry : mapToPopulate.entrySet()) {
+			cell = row.getCell(cellColumn);
+			cellColumn++;
+			entry.setValue(dataFormatter.formatCellValue(cell));
+		}
+	}
+
 	public void readRadioFileForCellInfo(List<LteSite> listOfSites) {
+		XSSFWorkbook workbook = null;
 		try {
-			OPCPackage opcPackage = OPCPackage.open(radioInput);
-			XSSFWorkbook workbook = new XSSFWorkbook(opcPackage);
-			try {
-				XSSFSheet sheetCellInfo = workbook.getSheetAt(0);
-				int numberOfRows = sheetCellInfo.getLastRowNum();
+			workbook = createExcelWorkbook(radioInput);
+			XSSFSheet sheetCellInfo = workbook.getSheetAt(0);
+			int numberOfRows = sheetCellInfo.getLastRowNum();
+			for (int i = 1; i <= numberOfRows; i++) {
+				Row row = sheetCellInfo.getRow(i);
+				Cell readedCell = row.getCell(2);
 				DataFormatter dataFormatter = new DataFormatter();
-				for (int i = 1; i <= numberOfRows; i++) {
-					Row row = sheetCellInfo.getRow(i);
-					int cellColumn = 2;
-					Cell readedCell = row.getCell(cellColumn);
-					String valueOfCell = dataFormatter.formatCellValue(readedCell);
-					for (int j = 0; j < listOfSites.size(); j++) {
-						LteSite tempLteSite = listOfSites.get(j);
-						if (valueOfCell.equals(tempLteSite.generalInfo.get("eNodeBId"))) {
-							LteCell tempLteCell = createTempLteCell();
-							for (Map.Entry<String, String> entry : tempLteCell.cellInfo.entrySet()) {
-								cellColumn++;
-								Cell cell = row.getCell(cellColumn);
-								entry.setValue(dataFormatter.formatCellValue(cell));
-							}
-							tempLteSite.lteCells.put(tempLteCell.cellInfo.get("localCellId"), tempLteCell);
-						}
+				String valueOfCell = dataFormatter.formatCellValue(readedCell);
+				for (int j = 0; j < listOfSites.size(); j++) {
+					LteSite tempLteSite = listOfSites.get(j);
+					if (valueOfCell.equals(tempLteSite.generalInfo.get("eNodeBId"))) {
+						LteCell tempLteCell = createTempLteCell();
+						populateDataIntoMap(tempLteCell.cellInfo, row, 3);
+						tempLteSite.lteCells.put(tempLteCell.cellInfo.get("localCellId"), tempLteCell);
 					}
 				}
-			} finally {
-				workbook.close();
 			}
-		} catch (IOException | InvalidFormatException e) {
-			e.printStackTrace();
+		} finally {
+			if (workbook != null) {
+				try {
+					workbook.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
@@ -122,81 +133,81 @@ public class InputReader {
 	}
 
 	public void readRadioFileForNeighbours(List<LteSite> listOfSites) {
+		XSSFWorkbook workbook = null;
 		try {
-			OPCPackage opcPackage = OPCPackage.open(radioInput);
-			XSSFWorkbook workbook = new XSSFWorkbook(opcPackage);
-			try {
-				XSSFSheet sheetNeighbours = workbook.getSheetAt(1);
-				int numberOfRows = sheetNeighbours.getLastRowNum();
+			workbook = createExcelWorkbook(radioInput);
+			XSSFSheet sheetNeighbours = workbook.getSheetAt(1);
+			int numberOfRows = sheetNeighbours.getLastRowNum();
+			for (int i = 1; i <= numberOfRows; i++) {
+				Row row = sheetNeighbours.getRow(i);
+				int cellColumn = 5;
+				Cell readedCell = row.getCell(cellColumn);
 				DataFormatter dataFormatter = new DataFormatter();
-				for (int i = 1; i <= numberOfRows; i++) {
-					Row row = sheetNeighbours.getRow(i);
-					int cellColumn = 5;
-					Cell readedCell = row.getCell(cellColumn);
-					String valueOfCell = dataFormatter.formatCellValue(readedCell);
-					for (int j = 0; j < listOfSites.size(); j++) {
-						LteSite tempLteSite = listOfSites.get(j);
-						for (int k = 0; k < tempLteSite.lteCells.size(); k++) {
-							LteCell tempLteCell = tempLteSite.lteCells.get(String.valueOf(k + 1));
-							String lnCellId = tempLteCell.cellInfo.get("lnCellId");
-							if (valueOfCell.equals(lnCellId)) {
-								GsmNeighbour tempGsmNeighbour = new GsmNeighbour();
-								Cell cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.cellName = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.cellId = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.bcc = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.ncc = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.lac = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.bcch = dataFormatter.formatCellValue(cell);
-								cell = row.getCell(++cellColumn);
-								tempGsmNeighbour.rac = dataFormatter.formatCellValue(cell);
-								tempLteCell.gsmNeighbours.put(tempGsmNeighbour.cellId, tempGsmNeighbour);
-							}
+				String valueOfCell = dataFormatter.formatCellValue(readedCell);
+				for (int j = 0; j < listOfSites.size(); j++) {
+					LteSite tempLteSite = listOfSites.get(j);
+					for (int k = 0; k < tempLteSite.lteCells.size(); k++) {
+						LteCell tempLteCell = tempLteSite.lteCells.get(String.valueOf(k + 1));
+						String lnCellId = tempLteCell.cellInfo.get("lnCellId");
+						if (valueOfCell.equals(lnCellId)) {
+							GsmNeighbour tempGsmNeighbour = new GsmNeighbour();
+							Cell cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.cellName = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.cellId = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.bcc = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.ncc = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.lac = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.bcch = dataFormatter.formatCellValue(cell);
+							cell = row.getCell(++cellColumn);
+							tempGsmNeighbour.rac = dataFormatter.formatCellValue(cell);
+							tempLteCell.gsmNeighbours.put(tempGsmNeighbour.cellId, tempGsmNeighbour);
 						}
 					}
 				}
-			} finally {
-				workbook.close();
 			}
-		} catch (IOException | InvalidFormatException e) {
-			e.printStackTrace();
+		} finally {
+			if (workbook != null) {
+				try {
+					workbook.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
 	public void readConfigFile(List<LteSite> listOfSites) {
+		XSSFWorkbook workbook = null;
 		try {
-			OPCPackage opcPackage = OPCPackage.open(configInput);
-			XSSFWorkbook workbook = new XSSFWorkbook(opcPackage);
-			try {
-				XSSFSheet sheetNeighbours = workbook.getSheetAt(0);
-				int numberOfRows = sheetNeighbours.getLastRowNum();
+			workbook = createExcelWorkbook(configInput);
+			XSSFSheet sheetNeighbours = workbook.getSheetAt(0);
+			int numberOfRows = sheetNeighbours.getLastRowNum();
+			for (int i = 1; i <= numberOfRows; i++) {
+				Row row = sheetNeighbours.getRow(i);
+				int cellColumn = 1;
+				Cell readedCell = row.getCell(cellColumn);
 				DataFormatter dataFormatter = new DataFormatter();
-				for (int i = 1; i <= numberOfRows; i++) {
-					Row row = sheetNeighbours.getRow(i);
-					int cellColumn = 1;
-					Cell readedCell = row.getCell(cellColumn);
-					String valueOfCell = dataFormatter.formatCellValue(readedCell);
-					for (int j = 0; j < listOfSites.size(); j++) {
-						LteSite tempLteSite = listOfSites.get(j);
-						if (valueOfCell.equals(tempLteSite.generalInfo.get("LocationId"))) {
-							for (Map.Entry<String, String> entry : tempLteSite.hardware.entrySet()) {
-								cellColumn++;
-								Cell cell = row.getCell(cellColumn);
-								entry.setValue(dataFormatter.formatCellValue(cell));
-							}
-						}
+				String valueOfCell = dataFormatter.formatCellValue(readedCell);
+				for (int j = 0; j < listOfSites.size(); j++) {
+					LteSite tempLteSite = listOfSites.get(j);
+					if (valueOfCell.equals(tempLteSite.generalInfo.get("LocationId"))) {
+						populateDataIntoMap(tempLteSite.hardware, row, 2);
 					}
 				}
-			} finally {
-				workbook.close();
 			}
-		} catch (IOException | InvalidFormatException e) {
-			e.printStackTrace();
+		} finally {
+			if (workbook != null) {
+				try {
+					workbook.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 }
