@@ -643,49 +643,35 @@ public class XmlCreator {
 		pNode.setTextContent(cuDestIp);
 	}
 
-	// TODO Srediti metod uvodjenjem detaljnijih XPath izraza.
 	public void editIprt(LteSite lteSite) {
-		NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
-				"//cmData/managedObject[@class=\"IPRT\"]");
-		Node managedObjectNode = managedObjectList.item(0);
-		NodeList childNodeList = managedObjectNode.getChildNodes();
-		for (int i = 0; i < childNodeList.getLength(); i++) {
-			Node childNode = childNodeList.item(i);
-			if (childNode.getNodeName().equals("list")) {
-				String nameNodeValue = getAttributeValueFromNode(childNode, "name");
-				if (nameNodeValue.equals("staticRoutes")) {
-					NodeList itemNodeList = childNode.getChildNodes();
-					for (int m = 0; m < itemNodeList.getLength(); m++) {
-						Node itemNode = itemNodeList.item(m);
-						if (itemNode.getNodeName().equals("item")) {
-							NodeList pNodeList = itemNode.getChildNodes();
-							for (int j = 0; j < pNodeList.getLength(); j++) {
-								Node pNode = pNodeList.item(j);
-								if (pNode.getNodeName().equals("p")) {
-									String pNameNodeValue = getAttributeValueFromNode(pNode, "name");
-									if (pNameNodeValue.equals("destIpAddr")) {
-										if (pNode.getTextContent().equals("0.0.0.0")) {
-											for (int k = 0; k < pNodeList.getLength(); k++) {
-												Node pNode2 = pNodeList.item(k);
-												if (pNode2.getNodeName().equals("p")) {
-													String pNameNodeValue2 = getAttributeValueFromNode(pNode2, "name");
-													if (pNameNodeValue2.equals("gateway")) {
-														pNode2.setTextContent(lteSite.transmission.get("cuGwIp"));
-													}
-												}
-											}
-										} else {
-											pNode.setTextContent(lteSite.transmission.get("topIp"));
-											for (int k = 0; k < pNodeList.getLength(); k++) {
-												Node pNode3 = pNodeList.item(k);
-												if (pNode3.getNodeName().equals("p")) {
-													String pNameNodeValue3 = getAttributeValueFromNode(pNode3, "name");
-													if (pNameNodeValue3.equals("gateway")) {
-														pNode3.setTextContent(lteSite.transmission.get("sGwIp"));
-													}
-												}
-											}
-										}
+		NodeList itemNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"IPRT\"]/list[@name=\"staticRoutes\"]/item");
+		for (int i = 0; i < itemNodeList.getLength(); i++) {
+			Node itemNode = itemNodeList.item(i);
+			NodeList pNodeList = itemNode.getChildNodes();
+			for (int j = 0; j < pNodeList.getLength(); j++) {
+				Node pNode = pNodeList.item(j);
+				if (pNode.getNodeName().equals("p")) {
+					String pNameNodeValue = getAttributeValueFromNode(pNode, "name");
+					if (pNameNodeValue.equals("destIpAddr")) {
+						if (pNode.getTextContent().equals("0.0.0.0")) {
+							for (int k = 0; k < pNodeList.getLength(); k++) {
+								Node pNode2 = pNodeList.item(k);
+								if (pNode2.getNodeName().equals("p")) {
+									String pNameNodeValue2 = getAttributeValueFromNode(pNode2, "name");
+									if (pNameNodeValue2.equals("gateway")) {
+										pNode2.setTextContent(lteSite.transmission.get("cuGwIp"));
+									}
+								}
+							}
+						} else {
+							pNode.setTextContent(lteSite.transmission.get("topIp"));
+							for (int k = 0; k < pNodeList.getLength(); k++) {
+								Node pNode3 = pNodeList.item(k);
+								if (pNode3.getNodeName().equals("p")) {
+									String pNameNodeValue3 = getAttributeValueFromNode(pNode3, "name");
+									if (pNameNodeValue3.equals("gateway")) {
+										pNode3.setTextContent(lteSite.transmission.get("sGwIp"));
 									}
 								}
 							}
@@ -794,7 +780,7 @@ public class XmlCreator {
 		}
 	}
 
-	public Document createXmlDocumentFromFile(File file) {
+	private Document createXmlDocumentFromFile(File file) {
 		DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
 		builderFactory.setIgnoringComments(true);
 		Document xmlDocument = null;
@@ -874,8 +860,6 @@ public class XmlCreator {
 		}
 	}
 
-	// TODO Napisati test i uraditi refactoring.
-	// Nema test u "TestAllConfigFiles-u" jer je samo za BG regiju. Provereno kroz koriscenje programa.
 	public void editIpno_Twamp(LteSite lteSite) {
 		String siteName = lteSite.generalInfo.get("LocationId");
 		boolean isBgArea = false;
@@ -884,35 +868,49 @@ public class XmlCreator {
 		}
 		if (isBgArea) {
 			String eNodeBId = lteSite.generalInfo.get("eNodeBId");
-			NodeList managedObjectList = (NodeList) getNodeSetObjectFromXmlDocument(
+			NodeList pNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
 					"//cmData/managedObject[@class=\"IPNO\" and @distName=\"MRBTS-" + eNodeBId + "/LNBTS-" + eNodeBId
-							+ "/FTM-1/IPNO-1\"]");
-			Node managedObjectNode = managedObjectList.item(0);
-			NodeList childNodeList = managedObjectNode.getChildNodes();
-			for (int i = 0; i < childNodeList.getLength(); i++) {
-				Node childNode = childNodeList.item(i);
-				if (childNode.getNodeName().equals("list")) {
-					String childNameValue = getAttributeValueFromNode(childNode, "name");
-					if (childNameValue.equals("twampFlag")) {
-						NodeList itemNodeList = childNode.getChildNodes();
-						for (int j = 0; j < itemNodeList.getLength(); j++) {
-							Node itemNode = itemNodeList.item(j);
-							if (itemNode.getNodeName().equals("item")) {
-								NodeList pNodeList = itemNode.getChildNodes();
-								for (int k = 0; k < pNodeList.getLength(); k++) {
-									Node pNode = pNodeList.item(k);
-									if (pNode.getNodeName().equals("p")) {
-										String pNameValue = getAttributeValueFromNode(pNode, "name");
-										if (pNameValue.equals("twampIpAddress")) {
-											pNode.setTextContent(lteSite.transmission.get("cuDestIp"));
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+							+ "/FTM-1/IPNO-1\"]/list[@name=\"twampFlag\"]/item/p[@name=\"twampIpAddress\"]");
+			Node pNode = pNodeList.item(0);
+			pNode.setTextContent(lteSite.transmission.get("cuDestIp"));
 		}
 	}
+
+	// TODO Ovaj metod je za brisanje LCELL node-ova kada se koristi template sa 4 sektora. Nije integrisan i testiran.
+	public void editNumberOfLcellNodes(LteSite lteSite) {
+		int cellNumber = lteSite.lteCells.size();
+		NodeList lcelllNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[@class=\"LCELL\"]");
+		for (int i = cellNumber; i < 4; i++) {
+			Node lcellNode = lcelllNodeList.item(i);
+			Node parentNode = lcellNode.getParentNode();
+			Node prevNode = lcellNode.getPreviousSibling();
+			if (prevNode != null && prevNode.getNodeType() == Node.TEXT_NODE
+					&& prevNode.getNodeValue().trim().length() == 0) {
+				parentNode.removeChild(prevNode);
+			}
+			parentNode.removeChild(lcellNode);
+		}
+	}
+
+	// TODO Ovaj metod je za brisanje node-ova koji imaju LNCEL-x u distName atributu u slucaju kada se koristi template sa 4 sektora. Nije integrisan
+	// i testiran.
+	public void editNumberOfLncellNodes(LteSite lteSite) {
+		int numberOfCells = lteSite.lteCells.size();
+		int firstCellToDelete = numberOfCells++;
+		String valueToFind = "LNCEL-" + firstCellToDelete;
+		NodeList lncellNodeList = (NodeList) getNodeSetObjectFromXmlDocument(
+				"//cmData/managedObject[contains(@distName, valueToFind)]");
+		for (int i = 0; i < lncellNodeList.getLength(); i++) {
+			Node lncellNode = lncellNodeList.item(i);
+			Node parentNode = lncellNode.getParentNode();
+			Node prevNode = lncellNode.getPreviousSibling();
+			if (prevNode != null && prevNode.getNodeType() == Node.TEXT_NODE
+					&& prevNode.getNodeValue().trim().length() == 0) {
+				parentNode.removeChild(prevNode);
+			}
+			parentNode.removeChild(lncellNode);
+		}
+	}
+
 }
